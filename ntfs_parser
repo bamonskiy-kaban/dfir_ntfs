@@ -9,9 +9,9 @@ from dfir_ntfs import *
 
 def format_timestamp(timestamp):
 	if timestamp is None:
-		return 'N/A'
+		return 'null'
 
-	return timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')
+	return timestamp.isoformat()
 
 def hexdump(buf):
 	def int2hex(i):
