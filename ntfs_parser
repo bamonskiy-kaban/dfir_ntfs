@@ -1151,20 +1151,20 @@ if mode in [ '--usn', '--log', '--indx', '--all-mft' ] and len(sys.argv) != 5:
 if mode == '--mft':
 	input_file = open(sys.argv[2], 'rb')
 	output_file = open(sys.argv[3], 'w', newline = '', encoding = 'utf-8')
-	csv_writer = csv.writer(output_file, delimeter = '|')
+	csv_writer = csv.writer(output_file, delimiter = '|')
 
 	process_mft()
 elif mode == '--mft-timeline':
 	input_file = open(sys.argv[2], 'rb')
 	output_file = open(sys.argv[3], 'w', newline = '', encoding = 'utf-8')
-	csv_writer = csv.writer(output_file, delimeter = '|')
+	csv_writer = csv.writer(output_file, delimiter = '|')
 
 	process_mft_timeline()
 elif mode == '--usn':
 	input_mft = open(sys.argv[2], 'rb')
 	input_file = open(sys.argv[3], 'rb')
 	output_file = open(sys.argv[4], 'w', newline = '', encoding = 'utf-8')
-	csv_writer = csv.writer(output_file, delimeter = '|')
+	csv_writer = csv.writer(output_file, delimiter = '|')
 
 	process_usn()
 
@@ -1186,7 +1186,7 @@ elif mode == '--indx':
 		sys.exit(0)
 
 	output_file = open(sys.argv[4], 'w', newline = '', encoding = 'utf-8')
-	csv_writer = csv.writer(output_file, delimeter = '|')
+	csv_writer = csv.writer(output_file, delimiter = '|')
 
 	process_indx()
 elif mode == '--all-mft':
@@ -1198,7 +1198,7 @@ elif mode == '--all-mft':
 		sys.exit(0)
 
 	output_file = open(sys.argv[4], 'w', newline = '', encoding = 'utf-8')
-	csv_writer = csv.writer(output_file, delimeter = '|')
+	csv_writer = csv.writer(output_file, delimiter = '|')
 
 	process_all_mft()
 
@@ -1206,7 +1206,7 @@ elif mode == '--all-mft':
 elif mode == '--mem':
 	input_file = open(sys.argv[2], 'rb')
 	output_file = open(sys.argv[3], 'w', newline = '', encoding = 'utf-8')
-	csv_writer = csv.writer(output_file, delimeter = '|')
+	csv_writer = csv.writer(output_file, delimiter = '|')
 
 	process_mem()
 elif mode == '--move':
