@@ -41,3 +41,15 @@ This code is not covered by the GNU GPL, version 3.
 
 ---
 (c) Maxim Suhanov
+
+
+UPDATE
+Added MFT timeline output:
+> ntfs_parser --mft-timeline <MFT> <output.csv>
+F<MACE> - MACE for $FILE_NAME attribute
+S<MACE> - MACE for $STANDARD_INFORMATION attribute
+I<MACE> - MACE for $FILE_NAME attribute of index record (if presented)
+W<MACH> - MACH for WSL timestamps
+
+installation:
+> git clone https://github.com/bamonskiy-kaban/dfir_ntfs && cd dfir_ntfs && pip install .
