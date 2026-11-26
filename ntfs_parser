@@ -293,7 +293,7 @@ def process_mft(source_tag = None):
 					csv_writer.writerow([format_source('Slack', source_tag), '?', '?', '?', '', file_path, '', '', '', '', '', '?', '?', '?', '?', '', '?', '', '', '', ''])
 
 
-def process_mft_timeline():
+def process_mft_timeline(source_tag=None):
     from types import SimpleNamespace
 
     global csv_writer, print_header
