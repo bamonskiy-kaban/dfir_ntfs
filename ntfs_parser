@@ -76,181 +76,6 @@ def format_source(source_str, source_tag):
 
 print_header = True
 
-def process_mft_timeline():
-    global input_file, csv_writer, print_header
-    mft = MFT.MasterFileTableParser(input_file)
-
-    if print_header:
-        csv_writer.writerow([
-            'ts',
-            'ts_type',
-            'path',
-            'size',
-            'in_use',
-            'is_dir',
-            'mft_ref_num'
-            ])
-    print_header = False
-
-    for file_record in mft.file_records():
-        try:
-            file_paths = mft.build_full_paths(file_record, True)
-        except MFT.MasterFileTableException:
-            continue
-        timestamps = []
-        attr_standard_information = None
-        file_size = None
-        objid_time = None
-        wsl_found = False
-
-        for attribute in file_record.attributes():
-            if type(attribute) is MFT.AttributeRecordResident:
-                attribute_value = attribute.value_decoded()
-
-                if type(attribute_value) is Attributes.StandardInformation:
-                    if attr_standard_information is None:
-                        attr_standard_information = attribute_value
-
-                if type(attribute_value) is Attributes.ObjectID:
-                    if objid_time is None:
-                        objid_time = attribute_value.get_timestamp()
-
-                if type(attribute_value) is Attributes.EA:
-                    if not wsl_found:
-                        for ea_name, ea_flags, ea_value in attribute_value.data_parsed():
-                            if ea_name == b'LXATTRB\x00':
-                                try:
-                                    lxattrb = WSL.LXATTRB(ea_value)
-                                except ValueError:
-                                    pass
-                                else:
-                                    wsl_found = True
-                                    timestamps.append(('WA', format_timestamp(lxattrb.get_atime())))
-                                    timestamps.append(('WM', format_timestamp(lxattrb.get_mtime())))
-                                    timestamps.append(('WCH', format_timestamp(lxattrb.get_chtime())))
-
-                if attribute.type_code == Attributes.ATTR_TYPE_DATA and attribute.name is None:
-                    if file_size is None:
-                        file_size = str(len(attribute.value))
-
-            else:
-                if attribute.type_code == Attributes.ATTR_TYPE_DATA and attribute.name is None and attribute.lowest_vcn == 0:
-                    if file_size is None:
-                        file_size = str(attribute.file_size)
-
-        if file_size is None:
-            file_size = '?'
-
-        if objid_time is not None:
-            timestamps.append(('OID', format_timestamp(objid_time)))
-
-        if attr_standard_information is not None:
-            timestamps.append(('SM', format_timestamp(attr_standard_information.get_mtime())))
-            timestamps.append(('SA', format_timestamp(attr_standard_information.get_atime())))
-            timestamps.append(('SC', format_timestamp(attr_standard_information.get_ctime())))
-            timestamps.append(('SE', format_timestamp(attr_standard_information.get_etime())))
-
-
-        if file_record.is_in_use():
-            fr_in_use = 'Y'
-        else:
-            fr_in_use = 'N'
-
-        if file_record.get_flags() & MFT.FILE_FILE_NAME_INDEX_PRESENT > 0:
-            fr_directory = 'Y'
-        else:
-            fr_directory = 'N'
-
-        fr_number = MFT.EncodeFileRecordSegmentReference(file_record.get_master_file_table_number(), file_record.get_sequence_number())
-
-        if len(file_paths) > 0:
-            for file_path, attr_file_name in file_paths:
-                fn_timestamps = [(f'FM', format_timestamp(attr_file_name.get_mtime())),
-                                 (f'FA', format_timestamp(attr_file_name.get_atime())),
-                                 (f'FC', format_timestamp(attr_file_name.get_ctime())),
-                                 (f'FE', format_timestamp(attr_file_name.get_etime()))]
-                for ts in fn_timestamps:
-                    csv_writer.writerow([
-                        ts[1],
-                        ts[0],
-                        file_path,
-                        file_size,
-                        fr_in_use,
-                        fr_directory,
-                        fr_number
-                        ])
-            for ts in timestamps:
-                csv_writer.writerow([
-                    ts[1],
-                    ts[0],
-                    file_paths[0][0],
-                    file_size,
-                    fr_in_use,
-                    fr_directory,
-                    fr_number
-                ])
-        else:
-            for ts in timestamps:
-                csv_writer.writerow([
-                    ts[1],
-                    ts[0],
-                    '?',
-                    file_size,
-                    fr_in_use,
-                    fr_directory,
-                    fr_number
-                ])
-
-        attr_index_root = None
-        if file_record.get_flags() & MFT.FILE_FILE_NAME_INDEX_PRESENT > 0:
-            for attribute in file_record.attributes():
-                if type(attribute) is MFT.AttributeRecordResident:
-                    attribute_value = attribute.value_decoded()
-                    if type(attribute_value) is Attributes.IndexRoot:
-                        if attribute_value.get_indexed_attribute_type_code() == Attributes.ATTR_TYPE_FILE_NAME:
-                            attr_index_root = attribute_value
-                            break
-
-            if attr_index_root is not None:
-                for index_entry in attr_index_root.index_entries():
-                    attr_file_name_raw = index_entry.get_attribute()
-                    if attr_file_name_raw is None:
-                        continue
-                    attr_file_name = Attributes.FileName(attr_file_name_raw)
-                    if len(file_paths) > 0:
-                        dir_path = file_paths[0][0]
-                        if dir_path == '/.':
-                            dir_path = ''
-
-                        file_path = MFT.PATH_SEPARATOR.join([dir_path, attr_file_name.get_file_name()])
-                    else:
-                        file_path = MFT.PATH_SEPARATOR.join(['<Unknown>', attr_file_name.get_file_name()])
-
-                    fr_number = index_entry.get_file_reference()
-
-                    if attr_file_name.get_file_attributes() & Attributes.DUP_FILE_NAME_INDEX_PRESENT > 0:
-                        fr_directory = 'Y'
-                    else:
-                        fr_directory = 'N'
-
-                    timestamps = [
-                            ('IM', format_timestamp(attr_file_name.get_mtime())),
-                            ('IA', format_timestamp(attr_file_name.get_atime())),
-                            ('IC', format_timestamp(attr_file_name.get_ctime())),
-                            ('IE', format_timestamp(attr_file_name.get_etime()))
-                    ]
-                    file_size = attr_file_name.get_file_size()
-                    for ts in timestamps:
-                        csv_writer.writerow([
-                            ts[1],
-                            ts[0],
-                            file_path,
-                            file_size,
-                            '?',
-                            fr_directory,
-                            fr_number
-                            ]
-                        )
 
 def process_mft(source_tag = None):
 	global input_file, csv_writer, print_header
@@ -466,6 +291,50 @@ def process_mft(source_tag = None):
 					file_path = MFT.PATH_SEPARATOR.join(['<Unknown, likely the same as above>', '<Can be partially overwritten or start with a wrong character>' + item])
 
 					csv_writer.writerow([format_source('Slack', source_tag), '?', '?', '?', '', file_path, '', '', '', '', '', '?', '?', '?', '?', '', '?', '', '', '', ''])
+
+
+def process_mft_timeline():
+    from types import SimpleNamespace
+
+    global csv_writer, print_header
+
+    output = csv_writer
+    write_header = print_header
+    suffix = " timestamp"
+    timestamp_columns = None
+    metadata_columns = []
+
+    def write_row(row):
+        nonlocal timestamp_columns
+
+        if timestamp_columns is None:
+            timestamp_columns = []
+            for index, name in enumerate(row):
+                if name.endswith(suffix):
+                    timestamp_columns.append((index, name[:-len(suffix)]))
+                else:
+                    metadata_columns.append(index)
+
+            if write_header:
+                metadata_header = [row[index] for index in metadata_columns]
+                output.writerow(["Timestamp", "Timestamp Type", *metadata_header])
+            return
+
+        metadata = [row[index] for index in metadata_columns]
+        for index, timestamp_type in timestamp_columns:
+            timestamp = row[index]
+            if timestamp not in (None, "", "N/A", "?"):
+                output.writerow([timestamp, timestamp_type, *metadata])
+
+    writer = SimpleNamespace(writerow=write_row)
+    try:
+        csv_writer = writer
+        print_header = True
+        process_mft(source_tag)
+    finally:
+        csv_writer = output
+        print_header = write_header and print_header
+
 
 def process_usn():
 	global input_file, input_mft, csv_writer
